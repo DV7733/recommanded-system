@@ -1,0 +1,80 @@
+import numpy as np
+import pandas as pd
+
+movies = pd.read_csv("tmdb_5000_movies.csv")
+credit = pd.read_csv("tmdb_5000_credits.csv")
+credit.count()
+
+movies =  movies.merge(credit,on='title')
+movies.count()
+#movies.drop(['cast_x','cast_y','crew_x','crew_y'],axis=1,inplace=True)
+
+# we want genres,id,title,overview,cast_x,crew_x,
+data = movies[['id','title','genres','overview','cast','crew']]
+data.head()
+
+#now filter every column
+#movies.cast_x[0]
+#we want only name from cast_x
+import ast
+def name(obj):
+    L=[]
+    count = 0
+    for i in ast.literal_eval(obj):
+        if count<3:
+            L.append(i['name'])
+        count+=1
+    return L
+
+data['cast'] = data['cast'].apply(name)
+
+#same function apply for genres
+data['genres'] = data['genres'].apply(name)
+
+#same function but same change for crew
+def director(obj):
+    l = []
+    for i in ast.literal_eval(obj):
+        if i['job'] == 'Director':
+            l.append(i['name'])
+    return l # we have to return in for loop
+
+data['crew'] = data['crew'].apply(director)
+
+df  = data # due to some errors we do this
+df.head(2)
+
+df = df[df['overview'].notnull()] # othervise it shoe the erroe that float has not split funtion
+df['overview'] = df['overview'].apply(lambda x:x.split()) # it convert string or float to list
+
+# now we havet to emove dpaces which are present in cast crew and genres
+def remove_space(text):
+    L1=[]
+    for i in text:
+        L1.append(i.replace(" ",""))
+    return L1
+
+#df['cast'].replace(" ","") we can't use this cause it take all list not a word it would use in column name
+
+
+df['genres'] = df['genres'].apply(remove_space)
+df['cast'] = df['cast'].apply(remove_space)
+df['crew'] = df['crew'].apply(remove_space)
+
+df['tag'] = df['genres']+df['cast']+df['crew']+df['overview']
+df['tag'] = df['tag'].apply(lambda x: "".join(x))
+df['tag'][0]
+
+df = df.drop(['genres','overview','cast','crew'],axis=1)
+
+df.head(2)
+
+from sklearn.feature_extraction.text  import CountVectorizer
+cv = CountVectorizer(max_features=4000,stop_words='english')
+
+vector = cv.fit_transform(df['tag']).toarray()
+
+vector.shape
+
+
+
